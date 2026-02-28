@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Medical AI Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Variables สำหรับ Theme */
+        :root {
+            /* Light Theme */
+            --bg-app: #f4f7fb;
+            --bg-card: #ffffff;
+            --bg-input: #f8fafc;
+            --bg-hover: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+            --heatmap-body: rgba(59, 130, 246, 0.1);
+            --heatmap-stroke: rgba(59, 130, 246, 0.3);
+        }
+
+        .dark {
+            /* Dark Theme */
+            --bg-app: #0b1120;
+            --bg-card: #1e293b;
+            --bg-input: #0f172a;
+            --bg-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --accent: #60a5fa;
+            --accent-hover: #93c5fd;
+            --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            --heatmap-body: rgba(59, 130, 246, 0.05);
+            --heatmap-stroke: rgba(59, 130, 246, 0.2);
+        }
+
+        /* Base Styles */
+        body {
+            font-family: 'Outfit', 'Prompt', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* Custom Classes เพื่อรองรับ Theming อัตโนมัติ */
+        .app-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-card);
+            border-radius: 1.5rem;
+            transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.2s ease;
+        }
+        .app-text-muted { color: var(--text-muted); }
+        .app-border { border-color: var(--border-color); }
+        .app-bg-hover:hover { background-color: var(--bg-hover); }
+        
+        .app-input {
+            background-color: var(--bg-input);
+            border: 1px solid transparent;
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+        .app-input:focus {
+            background-color: var(--bg-card);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Sidebar Navigation */
+        .nav-btn {
+            position: relative;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover { color: var(--text-main); }
+        .nav-btn.active { color: var(--accent); }
+        .nav-btn.active::after {
+            content: '';
+            position: absolute;
+            right: -24px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 20px;
+            background-color: var(--accent);
+            border-radius: 4px;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        /* Utilities */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Interactive Heatmap SVG */
+        .heatmap-path {
+            fill: var(--heatmap-body);
+            stroke: var(--heatmap-stroke);
+            transition: all 0.4s ease;
+        }
+        .hotspot-group { cursor: pointer; }
+        .hotspot-group:hover .hotspot-core { r: 6; fill: #ffffff; }
+        .hotspot-group:hover .hotspot-glow { r: 25; opacity: 0.8; }
+        .hotspot-group text { opacity: 0; transition: all 0.3s ease; fill: var(--text-main); font-weight: 500;}
+        .hotspot-group:hover text { opacity: 1; transform: translateX(12px); }
+        
+        .pulse-anim {
+            animation: pulseGlow 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+        @keyframes pulseGlow {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex overflow-hidden">
+
+    <!-- Sidebar (เมนูด้านซ้าย) -->
+    <aside class="w-20 bg-[var(--bg-card)] border-r app-border flex flex-col items-center py-8 z-20 hidden md:flex shrink-0 transition-colors duration-400">
+        <nav class="flex flex-col gap-8 flex-1 w-full items-center">
+            <button id="nav-page-home" onclick="navigateTo('page-home')" class="nav-btn w-10 h-10 flex items-center justify-center active" title="Overview">
+                <i class="ph ph-squares-four text-2xl"></i>
+            </button>
+            <button id="nav-page-xray" onclick="navigateTo('page-xray')" class="nav-btn w-10 h-10 flex items-center justify-center" title="X-Ray Analysis">
+                <i class="ph ph-scan text-2xl"></i>
+            </button>
+            <button id="nav-page-blood" onclick="navigateTo('page-blood')" class="nav-btn w-10 h-10 flex items-center justify-center" title="Blood Cell Count">
+                <i class="ph ph-drop text-2xl"></i>
+            </button>
+            <button id="nav-page-chat" onclick="navigateTo('page-chat')" class="nav-btn w-10 h-10 flex items-center justify-center" title="AI Assistant">
+                <i class="ph ph-sparkle text-2xl"></i>
+            </button>
+        </nav>
+
+        <div class="flex flex-col gap-6 mt-auto">
+            <!-- Theme Toggle Button -->
+            <button onclick="toggleTheme()" class="text-[var(--text-muted)] hover:text-[var(--accent)] transition duration-300" id="themeToggleBtn">
+                <i class="ph ph-moon text-xl" id="themeIcon"></i>
+            </button>
+            <button class="text-[var(--text-muted)] hover:text-[var(--text-main)] transition"><i class="ph ph-gear text-xl"></i></button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        <!-- Header -->
+        <header class="h-24 flex items-center justify-between px-8 lg:px-12 shrink-0 z-10">
+            <div class="flex items-center gap-4 md:hidden">
+                <button onclick="toggleTheme()" class="text-[var(--text-muted)]"><i class="ph ph-moon text-xl" id="themeIconMobile"></i></button>
+            </div>
+            
+            <div class="flex-1 max-w-md mx-4 hidden md:block">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)]"></i>
+                    <input type="text" data-i18n="search_placeholder" placeholder="Search patients or reports..." class="app-input w-full rounded-full py-3 pl-11 pr-4 outline-none text-sm">
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <!-- Language Toggle -->
+                <button onclick="toggleLanguage()" class="flex items-center gap-2 px-3 py-1.5 rounded-full app-border border app-bg-hover transition cursor-pointer text-sm font-medium">
+                    <i class="ph ph-globe text-lg"></i>
+                    <span id="langLabel">EN</span>
+                </button>
+
+                <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden cursor-pointer border-2 border-transparent hover:border-[var(--accent)] transition duration-300 ml-2 shadow-sm">
+                    <img src="https://www.login-learning.com/Logo.png" alt="User Profile" class="w-full h-full object-cover">
+                </div>
+            </div>
+        </header>
+
+        <!-- Pages Container -->
+        <div class="flex-1 overflow-y-auto px-4 md:px-8 lg:px-12 pb-12 relative z-0">
+
+            <!-- ======================================================== -->
+            <!-- 1. Landing Page (Home) -->
+            <!-- ======================================================== -->
+            <div id="page-home" class="page-view fade-in block h-full">
+                <div class="flex flex-col h-full max-w-7xl mx-auto">
+                    
+                    <div class="mb-10">
+                        <p class="app-text-muted text-sm mb-1 uppercase tracking-widest font-medium" data-i18n="home_subtitle">Overview</p>
+                        <h1 class="text-4xl" data-i18n="home_greeting">Good morning, <span class="app-text-muted">Dr. Smith</span></h1>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 flex-1 h-full">
+                        
+                        <!-- ฝั่งซ้าย: เมนูการ์ด -->
+                        <div class="xl:col-span-2 flex flex-col gap-8">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <!-- Card 1: X-Ray -->
+                                <div onclick="navigateTo('page-xray')" class="app-card p-8 flex flex-col items-start justify-between cursor-pointer group h-64 hover:-translate-y-1">
+                                    <div class="w-full flex justify-between items-start">
+                                        <div class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition duration-300 shadow-inner">
+                                            <i class="ph ph-scan text-3xl"></i>
+                                        </div>
+                                        <i class="ph ph-arrow-up-right text-[var(--text-muted)] group-hover:text-blue-500 transition"></i>
+                                    </div>
+                                    <div class="mt-auto">
+                                        <h2 class="text-xl mb-2 font-semibold" data-i18n="card_xray_title">X-Ray Analysis</h2>
+                                        <p class="app-text-muted text-sm leading-relaxed" data-i18n="card_xray_desc">Pneumonia detection via AI model (xray_best.pt)</p>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: Blood -->
+                                <div onclick="navigateTo('page-blood')" class="app-card p-8 flex flex-col items-start justify-between cursor-pointer group h-64 hover:-translate-y-1">
+                                    <div class="w-full flex justify-between items-start">
+                                        <div class="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 group-hover:bg-red-500 group-hover:text-white transition duration-300 shadow-inner">
+                                            <i class="ph ph-drop text-3xl"></i>
+                                        </div>
+                                        <i class="ph ph-arrow-up-right text-[var(--text-muted)] group-hover:text-red-500 transition"></i>
+                                    </div>
+                                    <div class="mt-auto">
+                                        <h2 class="text-xl mb-2 font-semibold" data-i18n="card_blood_title">Cell Count</h2>
+                                        <p class="app-text-muted text-sm leading-relaxed" data-i18n="card_blood_desc">Automated RBC, WBC & Platelets counter</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Chatbot -->
+                            <div onclick="navigateTo('page-chat')" class="app-card p-8 flex items-center justify-between cursor-pointer group hover:-translate-y-1">
+                                <div class="flex items-center gap-6">
+                                    <div class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition duration-300 shadow-inner">
+                                        <i class="ph ph-sparkle text-3xl"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-xl font-semibold" data-i18n="card_chat_title">Medical AI Assistant</h2>
+                                        <p class="app-text-muted text-sm mt-1" data-i18n="card_chat_desc">Powered by Gemini · Ask for second opinions</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center text-sm app-text-muted group-hover:text-purple-500 transition gap-2 font-medium">
+                                    <span data-i18n="card_chat_btn">Open Chat</span> <i class="ph ph-arrow-right text-lg"></i>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- ฝั่งขวา: High-Tech Interactive Heatmap SVG -->
+                        <div class="xl:col-span-1 app-card overflow-hidden relative flex flex-col items-center justify-center p-6 min-h-[450px]">
+                            <div class="absolute top-6 left-6 z-10">
+                                <h3 class="text-sm font-semibold tracking-wide" data-i18n="heatmap_title">Body Heatmap</h3>
+                                <p class="text-[10px] app-text-muted mt-1 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> <span data-i18n="heatmap_subtitle">Live Scan</span>
+                                </p>
+                            </div>
+
+                            <!-- Advanced Heatmap SVG -->
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 450" class="w-full h-full max-h-[400px] z-0 mt-8 drop-shadow-2xl">
+                                <defs>
+                                    <!-- Gradients for organs -->
+                                    <radialGradient id="brainGlow" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#a855f7" stop-opacity="0.8" />
+                                        <stop offset="100%" stop-color="#a855f7" stop-opacity="0" />
+                                    </radialGradient>
+                                    <radialGradient id="lungsGlow" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.7" />
+                                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+                                    </radialGradient>
+                                    <radialGradient id="heartGlow" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#ef4444" stop-opacity="0.8" />
+                                        <stop offset="100%" stop-color="#ef4444" stop-opacity="0" />
+                                    </radialGradient>
+                                    <!-- High-tech grid pattern inside body -->
+                                    <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.1"/>
+                                    </pattern>
+                                </defs>
+
+                                <!-- Body Silhouette (Futuristic) -->
+                                <path class="heatmap-path" d="M100,20 C115,20 125,35 125,55 C125,70 115,80 100,85 C85,80 75,70 75,55 C75,35 85,20 100,20 Z" stroke-width="1.5"/>
+                                <path class="heatmap-path" d="M100,85 C140,85 160,95 170,140 C175,170 170,220 165,230 C155,230 150,210 150,180 C150,230 140,270 100,270 C60,270 50,230 50,180 C50,210 45,230 35,230 C30,220 25,170 30,140 C40,95 60,85 100,85 Z" stroke-width="1.5" fill="url(#grid)"/>
+                                <path class="heatmap-path" d="M96,260 C105,260 115,270 115,310 C115,370 125,410 125,420 C125,425 115,430 108,430 C100,430 96,380 96,340 C96,380 92,430 84,430 C76,430 68,425 68,420 C68,410 76,370 76,310 C76,270 88,260 96,260 Z" stroke-width="1.5"/>
+
+                                <!-- Brain Heatmap & Hotspot -->
+                                <g class="hotspot-group" transform="translate(100, 50)" onclick="navigateTo('page-chat')">
+                                    <circle cx="0" cy="0" r="25" fill="url(#brainGlow)" class="hotspot-glow" opacity="0.5" transition="all 0.3s"/>
+                                    <circle cx="0" cy="0" r="15" fill="transparent" /> <!-- Hitbox -->
+                                    <circle cx="0" cy="0" r="4" fill="#a855f7" class="hotspot-core pulse-anim"/>
+                                    <text x="15" y="4" font-size="12" data-i18n="scan_brain">Brain Scan</text>
+                                </g>
+
+                                <!-- Lungs Heatmap & Hotspot -->
+                                <g class="hotspot-group" transform="translate(125, 130)" onclick="navigateTo('page-xray')">
+                                    <circle cx="0" cy="0" r="35" fill="url(#lungsGlow)" class="hotspot-glow" opacity="0.4"/>
+                                    <circle cx="-50" cy="0" r="35" fill="url(#lungsGlow)" class="hotspot-glow" opacity="0.4"/>
+                                    <circle cx="0" cy="0" r="20" fill="transparent" />
+                                    <circle cx="0" cy="0" r="4" fill="#3b82f6" class="hotspot-core pulse-anim"/>
+                                    <text x="15" y="4" font-size="12" data-i18n="scan_lungs">Lungs X-Ray</text>
+                                </g>
+
+                                <!-- Heart/Blood Heatmap & Hotspot -->
+                                <g class="hotspot-group" transform="translate(85, 145)" onclick="navigateTo('page-blood')">
+                                    <circle cx="0" cy="0" r="30" fill="url(#heartGlow)" class="hotspot-glow" opacity="0.5"/>
+                                    <circle cx="0" cy="0" r="20" fill="transparent" />
+                                    <circle cx="0" cy="0" r="4" fill="#ef4444" class="hotspot-core pulse-anim"/>
+                                    <text x="-80" y="4" font-size="12" data-i18n="scan_blood">Blood Cell</text>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 2. X-Ray ปอด -->
+            <!-- ======================================================== -->
+            <div id="page-xray" class="page-view hidden fade-in max-w-6xl mx-auto h-full flex flex-col">
+                <div class="flex items-center gap-4 mb-8 shrink-0">
+                    <button onclick="navigateTo('page-home')" class="w-10 h-10 rounded-full app-border border flex items-center justify-center app-text-muted app-bg-hover transition">
+                        <i class="ph ph-arrow-left text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-3xl font-semibold" data-i18n="page_xray_title">X-Ray Analysis</h1>
+                        <p class="text-xs app-text-muted mt-1 font-mono">Model: xray_best.pt</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
+                    <!-- Dropzone -->
+                    <div class="app-card p-8 flex flex-col h-full border-2 border-dashed border-[var(--border-color)] bg-transparent app-bg-hover transition cursor-pointer relative" id="xrayDropZone">
+                        <input type="file" id="xrayInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" onchange="previewImage('xrayInput', 'xrayPreview', 'xrayPlaceholder')">
+                        
+                        <div id="xrayPlaceholder" class="flex-1 flex flex-col items-center justify-center pointer-events-none opacity-60">
+                            <i class="ph ph-image text-5xl app-text-muted mb-4"></i>
+                            <h3 class="text-base font-medium" data-i18n="upload_xray">Drop chest X-ray image here</h3>
+                            <p class="text-xs app-text-muted mt-2">JPG, PNG supported</p>
+                        </div>
+                        
+                        <div class="flex-1 flex items-center justify-center pointer-events-none w-full h-full p-4">
+                            <img id="xrayPreview" class="hidden max-h-full rounded-2xl object-contain shadow-md" src="" alt="Xray Preview">
+                            <canvas id="xrayCanvas" class="hidden max-h-full rounded-2xl object-contain shadow-md"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="app-card p-10 flex flex-col h-full">
+                        <h3 class="text-sm app-text-muted uppercase tracking-widest mb-6 font-semibold" data-i18n="analysis_result">Analysis Result</h3>
+                        
+                        <div id="xrayResultArea" class="flex-1 flex flex-col items-center justify-center text-center bg-[var(--bg-app)] rounded-3xl border app-border">
+                            <i class="ph ph-scan text-5xl app-text-muted mb-4 opacity-50"></i>
+                            <p class="text-sm app-text-muted" data-i18n="wait_upload">Waiting for image upload</p>
+                        </div>
+                        
+                        <button onclick="processXray()" class="btn-primary w-full py-4 rounded-2xl text-base font-semibold flex items-center justify-center gap-2 mt-8 shrink-0">
+                            <i class="ph ph-magic-wand text-xl"></i> <span data-i18n="btn_analyze">Analyze Image</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 3. นับเซลล์เม็ดเลือด -->
+            <!-- ======================================================== -->
+            <div id="page-blood" class="page-view hidden fade-in max-w-7xl mx-auto h-full flex flex-col">
+                <div class="flex items-center gap-4 mb-8 shrink-0">
+                    <button onclick="navigateTo('page-home')" class="w-10 h-10 rounded-full app-border border flex items-center justify-center app-text-muted app-bg-hover transition">
+                        <i class="ph ph-arrow-left text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-3xl font-semibold" data-i18n="page_blood_title">Blood Cell Count</h1>
+                        <p class="text-xs app-text-muted mt-1 font-mono">Model: blood_best.pt</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 flex-1 min-h-0">
+                    
+                    <!-- ส่วนอัปโหลดและผลลัพธ์ -->
+                    <div class="lg:col-span-2 flex flex-col gap-8 h-full">
+                        <div class="app-card p-4 flex-1 relative border-2 border-dashed border-[var(--border-color)] bg-transparent app-bg-hover transition cursor-pointer">
+                            <input type="file" id="bloodInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" onchange="previewImage('bloodInput', 'bloodPreview', 'bloodPlaceholder')">
+                            <div id="bloodPlaceholder" class="h-full flex flex-col items-center justify-center pointer-events-none opacity-60">
+                                <i class="ph ph-drop text-4xl app-text-muted mb-3"></i>
+                                <h3 class="text-sm font-medium" data-i18n="upload_blood">Upload blood slide</h3>
+                            </div>
+                            <div class="h-full w-full flex items-center justify-center pointer-events-none p-2">
+                                <img id="bloodPreview" class="hidden max-h-full rounded-xl object-contain shadow-sm" src="" alt="Blood Preview">
+                                <canvas id="bloodCanvas" class="hidden max-h-full rounded-xl object-contain shadow-sm"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="app-card p-6 flex flex-col shrink-0">
+                            <div id="bloodResultArea" class="flex flex-col items-center justify-center text-center py-6 bg-[var(--bg-app)] rounded-2xl mb-4 border app-border min-h-[150px]">
+                                <i class="ph ph-calculator text-3xl app-text-muted mb-2 opacity-50"></i>
+                                <p class="text-sm app-text-muted" data-i18n="no_data">No data</p>
+                            </div>
+                            <button onclick="processBlood()" class="w-full py-4 rounded-2xl text-base font-semibold flex items-center justify-center gap-2 transition bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30">
+                                <i class="ph ph-play-circle text-xl"></i> <span data-i18n="btn_count">Count Cells</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนแสดงผล 3D -->
+                    <div class="lg:col-span-3 app-card p-0 overflow-hidden relative flex flex-col">
+                        <div class="absolute top-6 left-6 z-10">
+                            <h3 class="text-xs app-text-muted uppercase tracking-widest flex items-center gap-2 font-semibold bg-[var(--bg-card)] px-3 py-1.5 rounded-full shadow-sm border app-border">
+                                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                Live 3D View
+                            </h3>
+                        </div>
+                        <div id="blood-3d-canvas" class="w-full flex-1 cursor-grab active:cursor-grabbing"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 4. AI Chatbot -->
+            <!-- ======================================================== -->
+            <div id="page-chat" class="page-view hidden fade-in h-full flex flex-col max-w-5xl mx-auto">
+                <div class="flex items-center justify-between mb-6 shrink-0">
+                    <div class="flex items-center gap-4">
+                        <button onclick="navigateTo('page-home')" class="w-10 h-10 rounded-full app-border border flex items-center justify-center app-text-muted app-bg-hover transition">
+                            <i class="ph ph-arrow-left text-xl"></i>
+                        </button>
+                        <div>
+                            <h1 class="text-3xl font-semibold" data-i18n="page_chat_title">AI Assistant</h1>
+                            <p class="text-xs app-text-muted mt-1 flex items-center gap-1 font-medium">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span> Online
+                            </p>
+                        </div>
+                    </div>
+                    <button class="app-text-muted hover:text-[var(--text-main)] text-sm flex items-center gap-1 transition font-medium px-4 py-2 rounded-full app-bg-hover" onclick="clearChat()">
+                        <i class="ph ph-arrows-clockwise text-lg"></i> <span data-i18n="btn_reset">Reset Chat</span>
+                    </button>
+                </div>
+                
+                <div class="app-card flex-1 flex flex-col overflow-hidden bg-[var(--bg-card)] shadow-lg">
+                    <!-- พื้นที่แสดงข้อความแชท -->
+                    <div id="chatMessages" class="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar bg-[var(--bg-app)]/50">
+                        <!-- Default bot message -->
+                        <div class="flex gap-4 fade-in">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0 shadow-sm border border-purple-500/20">
+                                <i class="ph-fill ph-sparkle text-xl"></i>
+                            </div>
+                            <div class="bg-[var(--bg-card)] border app-border p-4 rounded-2xl rounded-tl-none text-[var(--text-main)] max-w-[80%] text-[15px] leading-relaxed shadow-sm" data-i18n="chat_welcome">
+                                Hello! I am your Medical AI Assistant. Do you have any questions regarding diagnoses or need help analyzing reports?
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- พื้นที่พิมพ์ข้อความ -->
+                    <div class="p-5 border-t app-border bg-[var(--bg-card)] shrink-0">
+                        <div class="relative flex items-center max-w-4xl mx-auto">
+                            <input type="text" id="chatInput" placeholder="Ask me anything..." data-i18n="chat_placeholder"
+                                class="w-full bg-[var(--bg-input)] rounded-full py-4 pl-6 pr-14 text-[15px] outline-none border border-transparent focus:border-[var(--accent)] transition text-[var(--text-main)] placeholder-[var(--text-muted)]"
+                                onkeypress="handleChatKeyPress(event)">
+                            <button onclick="sendChatMessage()" class="absolute right-2 w-10 h-10 rounded-full bg-[var(--accent)] text-white flex items-center justify-center hover:bg-[var(--accent-hover)] transition shadow-md">
+                                <i class="ph-fill ph-paper-plane-right text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // ==========================================
+        // Theme Toggle (Dark / Light Mode)
+        // ==========================================
+        let isDarkMode = false;
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.documentElement.classList.toggle('dark', isDarkMode);
+            
+            // เปลี่ยนไอคอน
+            const iconId = isDarkMode ? 'ph-sun' : 'ph-moon';
+            document.getElementById('themeIcon').className = `ph ${iconId} text-xl`;
+            document.getElementById('themeIconMobile').className = `ph ${iconId} text-xl`;
+
+            // อัปเดตสีพื้นหลัง 3D Model
+            updateThreeTheme();
+        }
+
+        // ==========================================
+        // Language Toggle (EN / TH)
+        // ==========================================
+        const i18n = {
+            en: {
+                search_placeholder: "Search patients or reports...",
+                home_subtitle: "Overview",
+                home_greeting: "Good morning, <span class='app-text-muted'>Dr. Smith</span>",
+                card_xray_title: "X-Ray Analysis",
+                card_xray_desc: "Pneumonia detection via AI model (xray_best.pt)",
+                card_blood_title: "Cell Count",
+                card_blood_desc: "Automated RBC, WBC & Platelets counter",
+                card_chat_title: "Medical AI Assistant",
+                card_chat_desc: "Powered by Gemini · Ask for second opinions",
+                card_chat_btn: "Open Chat",
+                heatmap_title: "Body Heatmap",
+                heatmap_subtitle: "Live Scan",
+                scan_brain: "Brain Scan",
+                scan_lungs: "Lungs X-Ray",
+                scan_blood: "Blood Cell",
+                page_xray_title: "X-Ray Analysis",
+                upload_xray: "Drop chest X-ray image here",
+                analysis_result: "Analysis Result",
+                wait_upload: "Waiting for image upload",
+                btn_analyze: "Analyze Image",
+                page_blood_title: "Blood Cell Count",
+                upload_blood: "Upload blood slide",
+                no_data: "No data",
+                btn_count: "Count Cells",
+                page_chat_title: "AI Assistant",
+                btn_reset: "Reset Chat",
+                chat_welcome: "Hello! I am your Medical AI Assistant. Do you have any questions regarding diagnoses or need help analyzing reports?",
+                chat_placeholder: "Ask me anything...",
+                analyze_loading: "Analyzing via AI...",
+                result_normal: "Normal",
+                result_normal_desc: "No signs of pneumonia detected.",
+                result_abnormal: "Abnormal (Pneumonia)",
+                result_abnormal_desc: "Opacity detected. Please consult physician.",
+                detect_total: "Total Detections:",
+                detect_none: "No cells detected.",
+                chat_thinking: "Thinking..."
+            },
+            th: {
+                search_placeholder: "ค้นหาข้อมูลผู้ป่วย หรือรายงาน...",
+                home_subtitle: "ภาพรวมระบบ",
+                home_greeting: "สวัสดีตอนเช้า, <span class='app-text-muted'>คุณหมอสมิธ</span>",
+                card_xray_title: "วิเคราะห์ X-Ray ปอด",
+                card_xray_desc: "ตรวจหาภาวะปอดอักเสบด้วย AI (xray_best.pt)",
+                card_blood_title: "นับเซลล์เม็ดเลือด",
+                card_blood_desc: "นับจำนวน RBC, WBC และเกล็ดเลือดอัตโนมัติ",
+                card_chat_title: "ผู้ช่วย AI ทางการแพทย์",
+                card_chat_desc: "ขับเคลื่อนโดย Gemini · ให้คำปรึกษาเพิ่มเติม",
+                card_chat_btn: "เปิดใช้งานแชท",
+                heatmap_title: "แผนผังร่างกาย",
+                heatmap_subtitle: "ระบบสแกนทำงาน",
+                scan_brain: "สแกนสมอง",
+                scan_lungs: "เอกซเรย์ปอด",
+                scan_blood: "สไลด์เลือด",
+                page_xray_title: "ระบบวิเคราะห์ X-Ray",
+                upload_xray: "ลากไฟล์ภาพ X-Ray ลงที่นี่",
+                analysis_result: "ผลการวิเคราะห์",
+                wait_upload: "รอการอัปโหลดรูปภาพ",
+                btn_analyze: "ประมวลผลภาพ",
+                page_blood_title: "ระบบนับเซลล์เม็ดเลือด",
+                upload_blood: "อัปโหลดภาพสไลด์เลือด",
+                no_data: "ยังไม่มีข้อมูล",
+                btn_count: "เริ่มนับจำนวน",
+                page_chat_title: "ผู้ช่วย AI (แชทบอท)",
+                btn_reset: "เริ่มแชทใหม่",
+                chat_welcome: "สวัสดีครับคุณหมอ! ผมคือผู้ช่วย AI ทางการแพทย์ มีข้อสงสัยเรื่องผลวินิจฉัย หรือต้องการให้ผมช่วยวิเคราะห์ข้อมูลส่วนไหน แจ้งมาได้เลยครับ",
+                chat_placeholder: "พิมพ์ข้อความสอบถามที่นี่...",
+                analyze_loading: "กำลังประมวลผลด้วย AI...",
+                result_normal: "ปกติ (Normal)",
+                result_normal_desc: "ไม่พบร่องรอยการติดเชื้อในปอด",
+                result_abnormal: "พบความผิดปกติ (Pneumonia)",
+                result_abnormal_desc: "พบฝ้าขาวบริเวณปอด เข้าข่ายปอดอักเสบ",
+                detect_total: "ตรวจพบเซลล์ทั้งหมด:",
+                detect_none: "ไม่พบเซลล์ในภาพ",
+                chat_thinking: "กำลังประมวลผลคำตอบ..."
+            }
+        };
+
+        let currentLang = 'en';
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'th' : 'en';
+            document.getElementById('langLabel').innerText = currentLang.toUpperCase();
+            
+            // อัปเดตข้อความในหน้าเว็บ
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    // ใช้ innerHTML เพื่อรองรับ tag HTML ย่อยในข้อความ (เช่น <span>)
+                    if(el.tagName === 'INPUT') {
+                        el.placeholder = i18n[currentLang][key];
+                    } else {
+                        el.innerHTML = i18n[currentLang][key];
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // SPA Navigation
+        // ==========================================
+        function navigateTo(pageId) {
+            document.querySelectorAll('.page-view').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block');
+            });
+            
+            const targetPage = document.getElementById(pageId);
+            if(targetPage) {
+                targetPage.classList.remove('hidden');
+                targetPage.classList.add('block');
+            }
+
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('nav-' + pageId);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            if(pageId === 'page-blood') {
+                setTimeout(initThreeJSRedBloodCells, 100); 
+            }
+        }
+
+        // ==========================================
+        // Three.js: 3D Red Blood Cells
+        // ==========================================
+        let threeScene, threeRenderer, threeCamera;
+        let threeSceneInitialized = false;
+
+        function updateThreeTheme() {
+            if(!threeScene || !threeRenderer) return;
+            // ดึงค่าสีพื้นหลังจากการคำนวณ CSS Variable --bg-card
+            const bgColorStr = getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim();
+            // สีที่ดึงมาจะเป็น HEX (เช่น #ffffff หรือ #1e293b)
+            const bgColor = new THREE.Color(bgColorStr);
+            threeScene.background = bgColor;
+            if(threeScene.fog) threeScene.fog.color = bgColor;
+        }
+
+        function initThreeJSRedBloodCells() {
+            if(threeSceneInitialized) return;
+            const container = document.getElementById('blood-3d-canvas');
+            if(!container || container.clientWidth === 0) return;
+            threeSceneInitialized = true;
+
+            threeScene = new THREE.Scene();
+            threeScene.fog = new THREE.Fog(0x000000, 5, 25); 
+
+            threeCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            
+            threeRenderer.setSize(container.clientWidth, container.clientHeight);
+            threeRenderer.setPixelRatio(window.devicePixelRatio);
+            threeRenderer.shadowMap.enabled = true;
+            threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(threeRenderer.domElement);
+
+            // Set Initial Theme
+            updateThreeTheme();
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            threeScene.add(ambientLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            threeScene.add(dirLight);
+
+            const fillLight = new THREE.DirectionalLight(0xffdddd, 0.3);
+            fillLight.position.set(-5, -5, -5);
+            threeScene.add(fillLight);
+
+            // Red Blood Cell Model
+            const geometry = new THREE.TorusGeometry(1, 0.45, 32, 64);
+            geometry.scale(1, 1, 0.4);
+
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xeb3455,
+                specular: 0xffffff,
+                shininess: 40,
+            });
+
+            const cells = [];
+            for(let i=0; i<35; i++) {
+                const cell = new THREE.Mesh(geometry, material);
+                cell.position.set(
+                    (Math.random() - 0.5) * 16,
+                    (Math.random() - 0.5) * 16,
+                    (Math.random() - 0.5) * 10 - 4
+                );
+                cell.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+                cell.castShadow = true;
+                cell.receiveShadow = true;
+                cell.userData = {
+                    rx: (Math.random() - 0.5) * 0.015,
+                    ry: (Math.random() - 0.5) * 0.015,
+                    vy: (Math.random() * 0.015) + 0.005
+                };
+                threeScene.add(cell);
+                cells.push(cell);
+            }
+
+            threeCamera.position.z = 12;
+
+            let mouseX = 0;
+            let mouseY = 0;
+            container.addEventListener('mousemove', (e) => {
+                const rect = container.getBoundingClientRect();
+                mouseX = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+                mouseY = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                threeCamera.position.x += (mouseX * 1.5 - threeCamera.position.x) * 0.05;
+                threeCamera.position.y += (mouseY * 1.5 - threeCamera.position.y) * 0.05;
+                threeCamera.lookAt(threeScene.position);
+
+                cells.forEach(cell => {
+                    cell.rotation.x += cell.userData.rx;
+                    cell.rotation.y += cell.userData.ry;
+                    cell.position.y += cell.userData.vy;
+                    if(cell.position.y > 10) {
+                        cell.position.y = -10;
+                        cell.position.x = (Math.random() - 0.5) * 16;
+                    }
+                });
+
+                threeRenderer.render(threeScene, threeCamera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                if(container.clientWidth > 0) {
+                    threeCamera.aspect = container.clientWidth / container.clientHeight;
+                    threeCamera.updateProjectionMatrix();
+                    threeRenderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+        }
+
+        // ==========================================
+        // ฟังก์ชั่นจัดการไฟล์ / X-Ray / Blood API
+        // ==========================================
+        function previewImage(inputId, previewId, placeholderId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            const placeholder = document.getElementById(placeholderId);
+            
+            if (inputId === 'bloodInput') {
+                const canvas = document.getElementById('bloodCanvas');
+                if (canvas) {
+                    canvas.classList.add('hidden');
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            } else if (inputId === 'xrayInput') {
+                const canvas = document.getElementById('xrayCanvas');
+                if (canvas) {
+                    canvas.classList.add('hidden');
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function processXray() {
+            const input = document.getElementById('xrayInput');
+            const resultArea = document.getElementById('xrayResultArea');
+            if (!input.files || input.files.length === 0) return alert('Please upload an image first.');
+
+            const file = input.files[0];
+            const loadingText = i18n[currentLang]['analyze_loading'];
+
+            resultArea.innerHTML = `
+                <div class="flex flex-col items-center opacity-80">
+                    <i class="ph ph-circle-notch animate-spin text-3xl text-[var(--accent)] mb-4"></i>
+                    <p class="text-xs app-text-muted tracking-widest uppercase font-semibold">${loadingText}</p>
+                </div>
+            `;
+
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("conf", "0.25");
+                formData.append("iou", "0.7");
+                formData.append("imgsz", "640");
+
+                const response = await fetch(
+                    "https://predict-69a257cff20f47264cce-dproatj77a-as.a.run.app/predict",
+                    {
+                        method: "POST",
+                        headers: { Authorization: "Bearer ul_0fd5ac8b3d35fd1992e4618c92b504b78e4cb187" },
+                        body: formData,
+                    }
+                );
+
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                
+                const result = await response.json();
+                console.log("X-Ray API Result:", result); // พิมพ์ค่า Result ดูใน Console
+                drawXrayResults(file, result);
+
+            } catch (error) {
+                resultArea.innerHTML = `
+                    <div class="flex flex-col items-center py-6">
+                        <i class="ph-fill ph-warning-circle text-red-500 text-4xl mb-3"></i>
+                        <p class="text-sm text-red-500 text-center font-medium">Analysis Failed.<br>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function drawXrayResults(file, result) {
+            const canvas = document.getElementById('xrayCanvas');
+            const imgElement = document.getElementById('xrayPreview');
+            const ctx = canvas.getContext('2d');
+            const resultArea = document.getElementById('xrayResultArea');
+
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                imgElement.classList.add('hidden');
+                canvas.classList.remove('hidden');
+
+                let classCounts = {};
+                let totalDetections = 0;
+
+                // เพิ่มความยืดหยุ่นในการอ่านค่า JSON 
+                let detections = [];
+                if (result.images && result.images.length > 0 && result.images[0].results) {
+                    detections = result.images[0].results;
+                } else if (result.predictions) {
+                    detections = result.predictions;
+                } else if (Array.isArray(result)) {
+                    detections = result;
+                } else if (result.data) {
+                    detections = result.data;
+                }
+
+                if (detections && detections.length > 0) {
+                    detections.forEach(det => {
+                        totalDetections++;
+                        const name = det.name || det.class || "Unknown";
+                        const confidenceValue = det.confidence || det.score || 0;
+                        const conf = (confidenceValue * 100).toFixed(1) + "%";
+                        
+                        // รองรับ Box หลายรูปแบบ
+                        const box = det.box || det.bbox || det;
+
+                        classCounts[name] = (classCounts[name] || 0) + 1;
+
+                        let x1, y1, x2, y2;
+                        if (box.x1 !== undefined) {
+                            x1 = box.x1; y1 = box.y1; x2 = box.x2; y2 = box.y2;
+                        } else if (box.x !== undefined && box.width !== undefined) {
+                            // กรณีได้ x,y ศูนย์กลาง และความกว้าง/สูง
+                            x1 = box.x - box.width / 2;
+                            y1 = box.y - box.height / 2;
+                            x2 = box.x + box.width / 2;
+                            y2 = box.y + box.height / 2;
+                        } else if (Array.isArray(box)) {
+                            [x1, y1, x2, y2] = box;
+                        } else if (box.xmin !== undefined) {
+                            x1 = box.xmin; y1 = box.ymin; x2 = box.xmax; y2 = box.ymax;
+                        }
+
+                        if (x1 !== undefined) {
+                            // แปลงค่าพิกัดหาก API ส่งมาเป็นค่า Normalized (0.0 - 1.0)
+                            if (x1 <= 1 && y1 <= 1 && x2 <= 1 && y2 <= 1) {
+                                x1 = x1 * img.width;
+                                y1 = y1 * img.height;
+                                x2 = x2 * img.width;
+                                y2 = y2 * img.height;
+                            }
+
+                            const width = x2 - x1;
+                            const height = y2 - y1;
+
+                            // กำหนดสีตาม Class 
+                            const lowerName = name.toLowerCase();
+                            let themeColor = '#06b6d4'; // Cyan สำหรับ Pneumonia
+                            
+                            if (lowerName.includes('covid')) themeColor = '#ef4444'; // แดง
+                            else if (lowerName.includes('normal')) themeColor = '#10b981'; // เขียว
+                            else if (lowerName.includes('opacity')) themeColor = '#f59e0b'; // ส้ม
+
+                            // 1. วาดสีพื้นหลังโปร่งแสง
+                            ctx.fillStyle = themeColor;
+                            ctx.globalAlpha = 0.25;
+                            ctx.fillRect(x1, y1, width, height);
+                            ctx.globalAlpha = 1.0;
+
+                            // 2. วาดขอบ
+                            ctx.strokeStyle = themeColor; 
+                            ctx.lineWidth = Math.max(2, img.width / 400); 
+                            ctx.strokeRect(x1, y1, width, height);
+
+                            // 3. วาดข้อความ
+                            const textToShow = `${name} ${conf}`;
+                            ctx.font = `600 ${Math.max(16, img.width / 40)}px 'Outfit', sans-serif`;
+                            
+                            ctx.fillStyle = themeColor;
+                            ctx.shadowColor = "rgba(0, 0, 0, 0.8)"; // เงาสีดำให้เด่นชัด
+                            ctx.shadowBlur = 4;
+                            ctx.fillText(textToShow, x1, y1 - 6);
+                            ctx.shadowBlur = 0; // รีเซ็ตเงา
+                        }
+                    });
+                }
+
+                // สรุปผลลัพธ์
+                if (totalDetections === 0) {
+                    // กรณีไม่พบความผิดปกติ (Normal)
+                    resultArea.innerHTML = `
+                        <div class="flex flex-col items-center fade-in bg-green-500/10 p-8 rounded-3xl w-full h-full justify-center">
+                            <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-white mb-4 shadow-lg shadow-green-500/30"><i class="ph-bold ph-check text-3xl"></i></div>
+                            <h4 class="text-2xl font-bold text-green-600 mb-2">${i18n[currentLang]['result_normal']}</h4>
+                            <p class="text-sm text-green-600/70 font-medium">${i18n[currentLang]['result_normal_desc']}</p>
+                        </div>`;
+                } else {
+                    // กรณีพบความผิดปกติ แสดงจุดที่พบ
+                    const txtTotal = i18n[currentLang]['detect_total'];
+                    let summaryHTML = `
+                        <div class="w-full text-left space-y-4 fade-in px-4 py-4">
+                            <div class="flex justify-between items-center border-b border-red-200/50 pb-3 mb-4">
+                                <span class="text-xs text-red-500/80 uppercase tracking-widest font-semibold">${txtTotal}</span>
+                                <span class="text-2xl font-bold text-red-500 bg-red-500/10 px-4 py-1 rounded-full">${totalDetections}</span>
+                            </div>
+                            <div class="max-h-40 overflow-y-auto pr-2 space-y-3 no-scrollbar">
+                    `;
+                    
+                    for (const [cls, count] of Object.entries(classCounts)) {
+                        summaryHTML += `
+                            <div class="flex justify-between items-end bg-[var(--bg-card)] p-4 rounded-xl border border-red-200/50 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                    <span class="text-sm font-semibold text-red-600 capitalize">${cls}</span>
+                                </div>
+                                <span class="text-xl font-bold text-red-700">${count}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    summaryHTML += `</div></div>`;
+                    resultArea.innerHTML = summaryHTML;
+                }
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        async function processBlood() {
+            const input = document.getElementById('bloodInput');
+            const resultArea = document.getElementById('bloodResultArea');
+            if (!input.files || input.files.length === 0) return alert('Please upload a slide first.');
+
+            const file = input.files[0];
+            const loadingText = i18n[currentLang]['analyze_loading'];
+
+            resultArea.innerHTML = `
+                <div class="flex flex-col items-center opacity-80 py-8">
+                    <i class="ph ph-circle-notch animate-spin text-3xl text-[var(--accent)] mb-4"></i>
+                    <p class="text-xs app-text-muted uppercase tracking-widest font-semibold">${loadingText}</p>
+                </div>
+            `;
+
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("conf", "0.25");
+                formData.append("iou", "0.7");
+                formData.append("imgsz", "640");
+
+                const response = await fetch(
+                    "https://predict-699a7c5571ee7037755d-dproatj77a-as.a.run.app/predict",
+                    {
+                        method: "POST",
+                        headers: { Authorization: "Bearer ul_0fd5ac8b3d35fd1992e4618c92b504b78e4cb187" },
+                        body: formData,
+                    }
+                );
+
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                
+                const result = await response.json();
+                drawBloodResults(file, result);
+
+            } catch (error) {
+                resultArea.innerHTML = `
+                    <div class="flex flex-col items-center py-6">
+                        <i class="ph-fill ph-warning-circle text-red-500 text-4xl mb-3"></i>
+                        <p class="text-sm text-red-500 text-center font-medium">Analysis Failed.<br>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function drawBloodResults(file, result) {
+            const canvas = document.getElementById('bloodCanvas');
+            const imgElement = document.getElementById('bloodPreview');
+            const ctx = canvas.getContext('2d');
+            const resultArea = document.getElementById('bloodResultArea');
+
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                imgElement.classList.add('hidden');
+                canvas.classList.remove('hidden');
+
+                let classCounts = {};
+                let totalDetections = 0;
+
+                if (result.images && result.images.length > 0 && result.images[0].results) {
+                    const detections = result.images[0].results;
+
+                    detections.forEach(det => {
+                        totalDetections++;
+                        const name = det.name || "Unknown";
+                        const conf = (det.confidence * 100).toFixed(1) + "%";
+                        const box = det.box;
+
+                        classCounts[name] = (classCounts[name] || 0) + 1;
+
+                        let x1, y1, x2, y2;
+                        if (box.x1 !== undefined) {
+                            x1 = box.x1; y1 = box.y1; x2 = box.x2; y2 = box.y2;
+                        } else if (Array.isArray(box)) {
+                            [x1, y1, x2, y2] = box;
+                        }
+
+                        if (x1 !== undefined) {
+                            // แปลงค่าพิกัดหาก API ส่งมาเป็นค่า Normalized (0.0 - 1.0)
+                            if (x1 <= 1 && y1 <= 1 && x2 <= 1 && y2 <= 1) {
+                                x1 = x1 * img.width;
+                                y1 = y1 * img.height;
+                                x2 = x2 * img.width;
+                                y2 = y2 * img.height;
+                            }
+
+                            const width = x2 - x1;
+                            const height = y2 - y1;
+
+                            // กำหนดสีตาม Class (Normal, Covid, Pneumonia, Opacity)
+                            const lowerName = name.toLowerCase();
+                            let themeColor = '#06b6d4'; // สี Teal/Cyan สำหรับ Pneumonia (ค่าเริ่มต้น)
+                            
+                            if (lowerName.includes('covid')) themeColor = '#ef4444'; // แดง
+                            else if (lowerName.includes('normal')) themeColor = '#10b981'; // เขียว
+                            else if (lowerName.includes('opacity')) themeColor = '#f59e0b'; // ส้ม/เหลือง
+
+                            // 1. วาดพื้นหลังแบบโปร่งแสง (Fill) เหมือนในภาพตัวอย่าง
+                            ctx.fillStyle = themeColor;
+                            ctx.globalAlpha = 0.25;
+                            ctx.fillRect(x1, y1, width, height);
+                            ctx.globalAlpha = 1.0;
+
+                            // 2. วาดกรอบสี่เหลี่ยม (Stroke)
+                            ctx.strokeStyle = themeColor; 
+                            ctx.lineWidth = Math.max(2, img.width / 400); 
+                            ctx.strokeRect(x1, y1, width, height);
+
+                            // 3. วาดข้อความ Class และ Conf (ไม่มีพื้นหลังข้อความ ใช้เงาแทน)
+                            const textToShow = `${name} ${conf}`;
+                            ctx.font = `600 ${Math.max(16, img.width / 40)}px 'Outfit', sans-serif`;
+                            
+                            ctx.fillStyle = themeColor;
+                            ctx.shadowColor = "rgba(0, 0, 0, 0.8)"; // เพิ่มเงาดำให้ตัวอักษรลอยเด่นขึ้นมาจากภาพ X-ray
+                            ctx.shadowBlur = 4;
+                            ctx.fillText(textToShow, x1, y1 - 6);
+                            ctx.shadowBlur = 0; // รีเซ็ตเงา
+                        }
+                    });
+                }
+
+                // สรุปผลลัพธ์
+                if (totalDetections === 0) {
+                    // กรณีไม่พบความผิดปกติ (Normal)
+                    resultArea.innerHTML = `
+                        <div class="flex flex-col items-center fade-in bg-green-500/10 p-8 rounded-3xl w-full h-full justify-center">
+                            <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-white mb-4 shadow-lg shadow-green-500/30"><i class="ph-bold ph-check text-3xl"></i></div>
+                            <h4 class="text-2xl font-bold text-green-600 mb-2">${i18n[currentLang]['result_normal']}</h4>
+                            <p class="text-sm text-green-600/70 font-medium">${i18n[currentLang]['result_normal_desc']}</p>
+                        </div>`;
+                } else {
+                    // กรณีพบความผิดปกติ แสดงจุดที่พบ พร้อมแยกสีคลาส
+                    const txtTotal = i18n[currentLang]['detect_total'];
+                    let summaryHTML = `
+                        <div class="w-full text-left space-y-4 fade-in px-4 py-4">
+                            <div class="flex justify-between items-center border-b app-border pb-3 mb-4">
+                                <span class="text-xs app-text-muted uppercase tracking-widest font-semibold">${txtTotal}</span>
+                                <span class="text-2xl font-bold text-[var(--accent)] bg-[var(--accent)]/10 px-4 py-1 rounded-full">${totalDetections}</span>
+                            </div>
+                            <div class="max-h-40 overflow-y-auto pr-2 space-y-3 no-scrollbar">
+                    `;
+                    
+                    for (const [cls, count] of Object.entries(classCounts)) {
+                        const lowerCls = cls.toLowerCase();
+                        let dotColor = 'bg-cyan-500';
+                        let textColor = 'text-cyan-600';
+                        if (lowerCls.includes('covid')) { dotColor = 'bg-red-500'; textColor = 'text-red-600'; }
+                        else if (lowerCls.includes('normal')) { dotColor = 'bg-green-500'; textColor = 'text-green-600'; }
+                        else if (lowerCls.includes('opacity')) { dotColor = 'bg-amber-500'; textColor = 'text-amber-600'; }
+
+                        summaryHTML += `
+                            <div class="flex justify-between items-end bg-[var(--bg-card)] p-4 rounded-xl border app-border shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full ${dotColor} animate-pulse"></span>
+                                    <span class="text-sm font-semibold ${textColor} capitalize">${cls}</span>
+                                </div>
+                                <span class="text-xl font-bold ${textColor}">${count}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    summaryHTML += `</div></div>`;
+                    resultArea.innerHTML = summaryHTML;
+                }
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        // ==========================================
+        // Chatbot Logic
+        // ==========================================
+        const apiKey = "AIzaSyAU8CDdWfMRQydtjr-3cigU-dcl_3OK7xk"; 
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+
+        function handleChatKeyPress(event) { if (event.key === 'Enter') sendChatMessage(); }
+        function clearChat() { 
+            chatMessages.innerHTML = `
+                <div class="flex gap-4 fade-in">
+                    <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0 shadow-sm border border-purple-500/20">
+                        <i class="ph-fill ph-sparkle text-xl"></i>
+                    </div>
+                    <div class="bg-[var(--bg-card)] border app-border p-4 rounded-2xl rounded-tl-none text-[var(--text-main)] max-w-[80%] text-[15px] leading-relaxed shadow-sm">
+                        ${i18n[currentLang]['chat_welcome']}
+                    </div>
+                </div>`; 
+        }
+        
+        async function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            // User message
+            chatMessages.innerHTML += `
+                <div class="flex gap-4 justify-end fade-in">
+                    <div class="bg-[var(--accent)] text-white p-4 rounded-2xl rounded-tr-none max-w-[80%] text-[15px] leading-relaxed shadow-md">${text}</div>
+                </div>`;
+            chatInput.value = '';
+            chatInput.disabled = true;
+
+            const loadingId = 'load-' + Date.now();
+            const txtThinking = i18n[currentLang]['chat_thinking'];
+            chatMessages.innerHTML += `
+                <div id="${loadingId}" class="flex gap-4 fade-in opacity-60">
+                    <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0"><i class="ph-fill ph-sparkle text-xl animate-pulse"></i></div>
+                    <div class="bg-[var(--bg-card)] border app-border p-4 rounded-2xl rounded-tl-none app-text-muted text-[15px] italic">${txtThinking}</div>
+                </div>`;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                });
+                document.getElementById(loadingId).remove();
+                const data = await response.json();
+                const aiReply = data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                
+                // Bot message
+                chatMessages.innerHTML += `
+                    <div class="flex gap-4 justify-start fade-in">
+                        <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0 shadow-sm border border-purple-500/20"><i class="ph-fill ph-sparkle text-xl"></i></div>
+                        <div class="bg-[var(--bg-card)] border app-border p-4 rounded-2xl rounded-tl-none text-[var(--text-main)] max-w-[80%] text-[15px] leading-relaxed shadow-sm">${aiReply}</div>
+                    </div>`;
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                chatMessages.innerHTML += `<div class="text-red-500 text-xs text-center my-2 font-medium">Connection failed. Please check API Key.</div>`;
+            } finally {
+                chatInput.disabled = false;
+                chatInput.focus();
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>
