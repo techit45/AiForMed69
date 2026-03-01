@@ -1,0 +1,45 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# ===================================================
+# Netlify Functions Proxy — แก้ปัญหา CORS + 504 Timeout
+# ใช้ Serverless Functions แทน proxy redirect ธรรมดา
+# เพราะ proxy redirect ส่ง multipart/form-data (ไฟล์รูป) ไม่ผ่าน
+# ===================================================
+
+# Route /api/xxx → /.netlify/functions/xxx
+[[redirects]]
+  from = "/api/xray-predict"
+  to = "/.netlify/functions/xray-predict"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/blood-predict"
+  to = "/.netlify/functions/blood-predict"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/gemini-chat"
+  to = "/.netlify/functions/gemini-chat"
+  status = 200
+  force = true
+
+# Redirect หน้าแรก (Index.html ตัวพิมพ์ใหญ่)
+[[redirects]]
+  from = "/"
+  to = "/Index.html"
+  status = 200
+
+# Custom Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+# ตั้งค่า Functions
+[functions]
+  node_bundler = "esbuild"
